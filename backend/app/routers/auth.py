@@ -35,7 +35,10 @@ def registro(
             detail=suap_data.get("error", "Erro ao validar credenciais com o SUAP")
         )
     
-    if db.query(Usuario).filter(Usuario.cpf == suap_data["cpf"]).first():
+    cpf_raw = suap_data.get("cpf", "") or ""
+    cpf_limpo = cpf_raw.replace(".", "").replace("-", "").replace(" ", "")
+
+    if db.query(Usuario).filter(Usuario.cpf == cpf_limpo).first():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="CPF já cadastrado"
@@ -54,7 +57,7 @@ def registro(
         )
     
     novo_usuario = Usuario(
-        cpf=suap_data.get("cpf", ""),
+        cpf=cpf_limpo,
         matricula=suap_data.get("matricula", registro_data.matricula),
         nome_completo=suap_data.get("nome_completo", ""),
         senha=get_password_hash(registro_data.nova_senha),

@@ -3,8 +3,8 @@
     :type="type"
     :disabled="disabled || loading"
     :class="[
-      'rounded-lg font-medium transition-all duration-200 cursor-pointer',
-      size === 'lg' ? 'px-6 py-3 text-lg' : size === 'sm' ? 'px-3 py-1.5 text-sm' : 'px-4 py-2',
+      'rounded-full font-medium transition-all duration-200 cursor-pointer',
+      size === 'lg' ? 'px-6 py-3.5 text-base' : size === 'sm' ? 'px-3 py-2 text-xs' : 'px-4 py-2.5 text-sm',
       'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white',
       variant === 'primary' 
         ? 'bg-purple-600 hover:bg-purple-700 text-white focus:ring-purple-500 disabled:bg-purple-400 disabled:cursor-not-allowed'

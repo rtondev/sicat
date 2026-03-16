@@ -6,19 +6,17 @@
       </div>
 
       <div class="w-full max-w-md mx-auto">
-        <div class="text-center mb-8">
-          <div class="flex justify-center mb-4">
-            <div class="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center">
-              <ion-icon name="person-add-outline" class="text-3xl text-purple-600"></ion-icon>
-            </div>
-          </div>
-          <h1 class="text-xl font-bold text-gray-900 mb-2">Criar Conta</h1>
-          <p class="text-gray-600">Registre-se para começar a usar o SICAT</p>
-        </div>
-
         <Card>
 
       <div class="mb-4">
+        <div class="mb-3 text-center">
+          <h2 class="text-lg font-semibold text-gray-900 mb-1">
+            {{ stepTitle }}
+          </h2>
+          <p class="text-xs text-gray-600">
+            {{ stepSubtitle }}
+          </p>
+        </div>
         <div class="flex items-center justify-between mb-2">
           <span class="text-xs font-medium text-gray-600">Etapa {{ currentStep }} de 3</span>
           <span class="text-xs font-medium text-gray-600">{{ progressPercentage }}%</span>
@@ -37,10 +35,6 @@
       </div>
 
       <div v-if="currentStep === 1" class="space-y-4">
-        <div class="text-center mb-4">
-          <h2 class="text-lg font-semibold text-gray-900 mb-1">Validação de Identidade</h2>
-          <p class="text-xs text-gray-600">Informe suas credenciais do SUAP</p>
-        </div>
         <Input
           id="matricula"
           label="Matrícula"
@@ -67,11 +61,6 @@
       </div>
 
       <div v-else-if="currentStep === 2" class="space-y-4">
-        <div class="text-center mb-4">
-          <h2 class="text-lg font-semibold text-gray-900 mb-1">Confirmação de Dados</h2>
-          <p class="text-xs text-gray-600">Verifique os dados coletados do SUAP</p>
-        </div>
-        
         <Card class="bg-purple-50 border-purple-200 p-4">
           <div class="space-y-3">
             <div>
@@ -103,10 +92,6 @@
       </div>
 
       <div v-else class="space-y-4">
-        <div class="text-center mb-4">
-          <h2 class="text-lg font-semibold text-gray-900 mb-1">Definir Senha</h2>
-          <p class="text-xs text-gray-600">Crie uma nova senha para sua conta</p>
-        </div>
         <Input
           id="nova_senha"
           label="Nova Senha"
@@ -115,8 +100,56 @@
           placeholder="Digite sua nova senha"
           required
           :error="errors.nova_senha"
-          hint="Mínimo de 6 caracteres"
         />
+        <div class="mt-1 p-3 rounded-lg bg-gray-50 border border-gray-200">
+          <template v-if="!passwordChecks.allValid">
+            <p class="text-xs font-medium text-gray-700 mb-2">Sua senha deve conter:</p>
+            <ul class="space-y-1 text-xs list-none pl-0">
+              <li class="flex items-center gap-2">
+                <ion-icon
+                  :name="passwordChecks.minLength ? 'checkmark-circle' : 'close-circle-outline'"
+                  :class="passwordChecks.minLength ? 'text-green-500' : 'text-red-400'"
+                ></ion-icon>
+                <span :class="passwordChecks.minLength ? 'text-green-700' : 'text-red-600'">
+                  Pelo menos 8 caracteres
+                </span>
+              </li>
+              <li class="flex items-center gap-2">
+                <ion-icon
+                  :name="passwordChecks.hasUpper ? 'checkmark-circle' : 'close-circle-outline'"
+                  :class="passwordChecks.hasUpper ? 'text-green-500' : 'text-red-400'"
+                ></ion-icon>
+                <span :class="passwordChecks.hasUpper ? 'text-green-700' : 'text-red-600'">
+                  Uma letra maiúscula (A-Z)
+                </span>
+              </li>
+              <li class="flex items-center gap-2">
+                <ion-icon
+                  :name="passwordChecks.hasLower ? 'checkmark-circle' : 'close-circle-outline'"
+                  :class="passwordChecks.hasLower ? 'text-green-500' : 'text-red-400'"
+                ></ion-icon>
+                <span :class="passwordChecks.hasLower ? 'text-green-700' : 'text-red-600'">
+                  Uma letra minúscula (a-z)
+                </span>
+              </li>
+              <li class="flex items-center gap-2">
+                <ion-icon
+                  :name="passwordChecks.hasNumber ? 'checkmark-circle' : 'close-circle-outline'"
+                  :class="passwordChecks.hasNumber ? 'text-green-500' : 'text-red-400'"
+                ></ion-icon>
+                <span :class="passwordChecks.hasNumber ? 'text-green-700' : 'text-red-600'">
+                  Um número (0-9)
+                </span>
+              </li>
+            </ul>
+          </template>
+          <template v-else>
+            <div class="flex items-center gap-2 text-xs text-green-700">
+              <ion-icon name="shield-checkmark-outline" class="text-green-500"></ion-icon>
+              <span>Sua senha atende aos requisitos mínimos de segurança.</span>
+            </div>
+          </template>
+        </div>
         <Input
           id="confirmar_senha"
           label="Confirmar Senha"
@@ -217,6 +250,31 @@ const progressPercentage = computed(() => {
   return Math.round((currentStep.value / 3) * 100)
 })
 
+const stepTitle = computed(() => {
+  if (currentStep.value === 1) return 'Validação de Identidade'
+  if (currentStep.value === 2) return 'Confirmação de Dados'
+  return 'Definir Senha'
+})
+
+const stepSubtitle = computed(() => {
+  if (currentStep.value === 1) return 'Informe suas credenciais do SUAP'
+  if (currentStep.value === 2) return 'Verifique os dados coletados do SUAP'
+  return 'Crie uma nova senha para sua conta'
+})
+
+const passwordChecks = computed(() => {
+  const value = form.value.nova_senha || ''
+  return {
+    minLength: value.length >= 8,
+    hasUpper: /[A-Z]/.test(value),
+    hasLower: /[a-z]/.test(value),
+    hasNumber: /[0-9]/.test(value),
+    get allValid() {
+      return this.minLength && this.hasUpper && this.hasLower && this.hasNumber
+    }
+  }
+})
+
 const validateStep1 = () => {
   errors.value = {}
   
@@ -238,8 +296,8 @@ const validateStep2 = () => {
   
   if (!form.value.nova_senha) {
     errors.value.nova_senha = 'Nova senha é obrigatória'
-  } else if (form.value.nova_senha.length < 6) {
-    errors.value.nova_senha = 'A senha deve ter no mínimo 6 caracteres'
+  } else if (!passwordChecks.value.minLength || !passwordChecks.value.hasUpper || !passwordChecks.value.hasLower || !passwordChecks.value.hasNumber) {
+    errors.value.nova_senha = 'A senha não atende aos requisitos mínimos'
   }
   
   if (!form.value.confirmar_senha) {

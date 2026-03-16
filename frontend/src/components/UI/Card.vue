@@ -1,5 +1,5 @@
 <template>
-  <div :class="['rounded-lg border border-gray-200 bg-white p-6', padding && `p-${padding}`]">
+  <div :class="['p-6 rounded-3xl border border-gray-100 bg-gray-100', padding && `p-${padding}`]">
     <slot></slot>
   </div>
 </template>

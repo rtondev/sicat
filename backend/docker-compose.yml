@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: sicat-db
+    environment:
+      MYSQL_DATABASE: sicat
+      MYSQL_USER: sicat_user
+      MYSQL_PASSWORD: sicat_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - db_data:/var/lib/mysql
+
+  backend:
+    build:
+      context: .
+    container_name: sicat-backend
+    env_file:
+      - .env
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: sicat-phpmyadmin
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: sicat_user
+      PMA_PASSWORD: sicat_password
+    ports:
+      - "8080:80"
+
+volumes:
+  db_data:
+
