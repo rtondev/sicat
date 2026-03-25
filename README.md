@@ -1,105 +1,116 @@
 # SICAT Backend
 
-## Guia Docker (recomendado)
+## Docker só da API (recomendado na VPS com MySQL já instalado)
 
-1. **Instale o Docker**  
-   Baixe e instale em: [https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/)  
-   Em **Ubuntu VPS**, use o [guia oficial](https://docs.docker.com/engine/install/ubuntu/) (Docker Engine + plugin Compose).
+Use o **mesmo servidor MySQL** de outros projetos (ex.: fluxomed), com **outro database** (ex.: `sicat`).
 
-2. **Suba banco, backend e phpMyAdmin:**
+1. Crie o banco no MySQL do host (uma vez):
+
+```sql
+CREATE DATABASE sicat CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+2. Na pasta do projeto:
+
 ```bash
-cd /caminho/do/sicat
 cp env.example .env
-# Ajuste SECRET_KEY e, se quiser, credenciais do MySQL em docker-compose.yml + DATABASE_URL
+nano .env
+```
+
+- **`DATABASE_URL`**: usuário/senha iguais aos do MySQL do host; host **`host.docker.internal`** (traefik/docker resolve até o host); nome do banco **`sicat`**.
+  - Exemplo com `root`:  
+    `mysql+pymysql://root:SUA_SENHA@host.docker.internal:3306/sicat`  
+  - Se a senha tiver `!`, `@`, etc., use encoding na URL (`!` → `%21`).
+- **`SECRET_KEY`**: use uma chave **própria** do SICAT (não precisa ser a mesma do `JWT_SECRET` de outro app).
+
+3. Suba só o backend:
+
+```bash
 docker compose up --build -d
 ```
 
-3. **Acessos:**
-- **API** → [http://localhost:7000](http://localhost:7000)
-- **Documentação (Swagger)** → [http://localhost:7000/docs](http://localhost:7000/docs)
-- **phpMyAdmin** → [http://localhost:8080](http://localhost:8080) (servidor: `db`, usuário: `sicat_user`, senha: `sicat_password`)
-- **MySQL** → `localhost:3306` (banco: `sicat`)
+A API fica em **porta 7000** (`/docs` para Swagger).
+
+### Se der erro de conexão com o MySQL
+
+Quando o MySQL só escuta em **`127.0.0.1`**, o container pode não alcançar via `host.docker.internal` dependendo da config. Nesse caso, no **Linux** use rede do host:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.host-network.yml up --build -d
+```
+
+E no `.env`: `DATABASE_URL=...//usuario:senha@127.0.0.1:3306/sicat`.
+
+**Outra opção** é no MySQL definir `bind-address = 0.0.0.0` e restringir acesso no firewall (menos comum se já está tudo na mesma VPS).
+
+---
+
+## Stack com MySQL dentro do Docker (opcional / dev)
+
+Se **não** tiver MySQL no host:
+
+```bash
+docker compose -f docker-compose.bundled-mysql.yml up --build -d
+```
+
+Ajuste `.env` se não quiser usar o `DATABASE_URL` padrão definido nesse arquivo, ou confira as variáveis no próprio `docker-compose.bundled-mysql.yml`.
+
+---
+
+## Guia Docker (desktop / referência)
+
+1. **Instale o Docker**  
+   Desktop: [https://www.docker.com/products/docker-desktop/](https://www.docker.com/products/docker-desktop/)  
+   **Ubuntu VPS**: [Docker Engine + Compose](https://docs.docker.com/engine/install/ubuntu/).
+
+2. **Subir** (conforme cenário acima: só API, host-network, ou bundled MySQL).
+
+3. **Acessos** (compose padrão só API):
+   - **API** → `http://localhost:7000` (ou IP da VPS)
+   - **Swagger** → `http://localhost:7000/docs`
 
 ---
 
 ## Instalação (sem Docker)
 
 1. Criar ambiente virtual:
+
 ```bash
 python -m venv venv
 ```
 
-2. Ativar ambiente virtual:
-- Windows:
-```bash
-venv\Scripts\activate
-```
-- Linux/Mac:
+2. Ativar (Linux/Mac):
+
 ```bash
 source venv/bin/activate
 ```
 
 3. Instalar dependências:
+
 ```bash
 pip install -r requirements.txt
 ```
 
-## Executar
+4. `.env` com `DATABASE_URL` apontando para `127.0.0.1:3306` e banco `sicat`.
+
+5. Executar:
 
 ```bash
 uvicorn main:app --reload --port 7000
 ```
 
-O servidor estará disponível em `http://localhost:7000`
-
 ---
 
-## Deploy em VPS Ubuntu (Docker)
+## Deploy em VPS Ubuntu (resumo)
 
-1. **Instalar Docker e Compose** (resumo):
-```bash
-sudo apt-get update
-sudo apt-get install -y ca-certificates curl
-sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${VERSION_CODENAME:-$VERSION}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-```
+1. Instalar Docker Engine + plugin Compose ([documentação](https://docs.docker.com/engine/install/ubuntu/)).
+2. Clonar o repositório, criar `.env` (banco `sicat` no MySQL que já existe na VPS).
+3. `docker compose up --build -d` (ou com `docker-compose.host-network.yml` se necessário).
+4. UFW: liberar **22** e **7000** (ou só **80/443** se usar Nginx na frente).
 
-2. **Colocar o projeto na VPS** (ex.: clonar o repositório na pasta desejada).
+Logs e atualização:
 
-3. **Configurar `.env`** na raiz do projeto (mesmo diretório do `docker-compose.yml`):
-```bash
-cp env.example .env
-nano .env
-```
-   - Com **Docker Compose**, use `DATABASE_URL` com host **`db`** e usuário/senha iguais aos definidos em `docker-compose.yml` (padrão do exemplo: `sicat_user` / `sicat_password`).
-   - Defina um **`SECRET_KEY` forte** (não use o valor de exemplo em produção).
-
-4. **Subir os serviços** (API na porta **7000**):
-```bash
-docker compose up --build -d
-docker compose ps
-curl -s http://127.0.0.1:7000/
-```
-
-5. **Firewall (UFW)** — se estiver ativo, libere a API (e opcionalmente só IP confiável):
-```bash
-sudo ufw allow 22/tcp
-sudo ufw allow 7000/tcp
-sudo ufw enable
-sudo ufw status
-```
-   Em produção é mais seguro expor só **80/443** e usar **Nginx** (ou Traefik) como proxy reverso para `http://127.0.0.1:7000`, com TLS (Let’s Encrypt).
-
-6. **phpMyAdmin** (opcional): o compose publica na porta **8080**; restrinja por firewall ou remova o serviço em produção se não for necessário.
-
-7. **Logs e atualização**:
 ```bash
 docker compose logs -f backend
-docker compose pull   # se usar imagens públicas atualizadas
 git pull && docker compose up --build -d
 ```
-
