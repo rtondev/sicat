@@ -1,7 +1,7 @@
 version: "3.9"
 
-# MySQL roda no host da VPS (ex.: mesmo mysqld do fluxomed-api), outro DATABASE (ex.: sicat).
-# No .env use host host.docker.internal na DATABASE_URL — exige extra_hosts abaixo (Linux).
+# API em container; MySQL no host (ex.: mesmo mysqld da VPS, database separado, ex.: sicat).
+# DATABASE_URL no .env: host host.docker.internal (extra_hosts abaixo aponta para o host no Linux).
 
 services:
   backend:
