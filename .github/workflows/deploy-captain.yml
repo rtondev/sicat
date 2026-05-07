@@ -9,6 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Captain build
-        run: curl -fsS "$CAPROVER_WEBHOOK_URL"
+        run: curl -fsS -X POST "$CAPROVER_WEBHOOK_URL"
         env:
           CAPROVER_WEBHOOK_URL: ${{ secrets.CAPROVER_WEBHOOK_URL }}
