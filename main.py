@@ -1,13 +1,33 @@
+from contextlib import asynccontextmanager
+import asyncio
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from app.database import engine, Base
+from app.database import engine, Base, settings
 from app.routers import auth, fichas, admin, public, bibliotecarios
+from app.admin_sync import admin_sync_loop
+
+logging.basicConfig(level=logging.INFO)
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="SICAT API", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    stop = asyncio.Event()
+    task = None
+    if settings.admin_sync_enabled:
+        task = asyncio.create_task(admin_sync_loop(stop))
+    yield
+    if task:
+        stop.set()
+        await task
+
+
+app = FastAPI(title="SICAT API", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

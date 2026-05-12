@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -9,11 +10,26 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_hours: int = 72
     suap_api_url: str = "https://suap.ifrn.edu.br"
-    
+    # Matrículas (separadas por vírgula) que passam a admin ao registar ou ao iniciar sessão.
+    admin_matriculas: str = Field(
+        default="20221041110028",
+        description="Lista opcional; sobrescreve com env ADMIN_MATRICULAS",
+    )
+    # Intervalo em segundos para reforçar admin no BD (cron interno).
+    admin_sync_interval_seconds: int = Field(default=300, ge=30)
+    admin_sync_enabled: bool = True
+
     class Config:
         env_file = ".env"
 
 settings = Settings()
+
+
+def matriculas_admin_configuradas() -> set[str]:
+    raw = (settings.admin_matriculas or "").strip()
+    if not raw:
+        return set()
+    return {m.strip() for m in raw.split(",") if m.strip()}
 
 connect_args = {}
 if 'pymysql' in settings.database_url:

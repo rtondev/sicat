@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.database import get_db, matriculas_admin_configuradas
 from app.models import Usuario, JWTAuth, TipoUsuario
 from app.schemas import (
     UsuarioCreate, UsuarioResponse, LoginRequest, LoginResponse,
@@ -55,13 +55,17 @@ def registro(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Senhas não coincidem"
         )
-    
+
+    matricula_final = (suap_data.get("matricula", registro_data.matricula) or "").strip()
+    admins = matriculas_admin_configuradas()
+    tipo = TipoUsuario.admin if matricula_final in admins else TipoUsuario.default
+
     novo_usuario = Usuario(
         cpf=cpf_limpo,
-        matricula=suap_data.get("matricula", registro_data.matricula),
+        matricula=matricula_final,
         nome_completo=suap_data.get("nome_completo", ""),
         senha=get_password_hash(registro_data.nova_senha),
-        tipo=TipoUsuario.default
+        tipo=tipo
     )
     
     db.add(novo_usuario)
@@ -79,7 +83,13 @@ def login(login_data: LoginRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Matrícula ou senha incorretas"
         )
-    
+
+    if usuario.matricula.strip() in matriculas_admin_configuradas() and usuario.tipo == TipoUsuario.default:
+        usuario.tipo = TipoUsuario.admin
+        usuario.data_edicao = datetime.utcnow()
+        db.commit()
+        db.refresh(usuario)
+
     access_token_expires = timedelta(hours=72)
     access_token = create_access_token(
         data={"sub": usuario.id, "tipo": usuario.tipo.value},
